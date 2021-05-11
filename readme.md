@@ -3,6 +3,6 @@
 
 - `npm install`
 - `npm run start`
-- Move with arrow keys
+- Move with the arrow keys
 
 
