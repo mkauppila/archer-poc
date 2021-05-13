@@ -1,5 +1,3 @@
-const { Main, Renderer } = require("electron");
-
 let globalCanvas: HTMLCanvasElement;
 window.addEventListener("DOMContentLoaded", () => {
   let canvas = document.getElementById("canvas") as HTMLCanvasElement | null;
@@ -79,10 +77,8 @@ type Vector = {
 };
 
 type Mob = {
-  position: Vector;
+  aabb: AABB;
   movement: Vector;
-  width: number;
-  height: number;
 };
 
 type Bullet = {
@@ -95,46 +91,60 @@ type GameState = {
   playerBullets: Bullet[];
 };
 
+type AABB = {
+  position: Vector;
+  width: number;
+  height: number;
+};
+
 const gameState: GameState = {
   player: {
-    position: {
-      x: 200,
-      y: 600,
+    aabb: {
+      position: {
+        x: 200,
+        y: 600,
+      },
+      width: 10,
+      height: 10,
     },
     movement: {
       x: 0,
       y: 0,
     },
-    width: 10,
-    height: 10,
   },
   mobs: [
     {
-      position: {
-        x: 100,
-        y: 300,
+      aabb: {
+        position: {
+          x: 100,
+          y: 300,
+        },
+        width: 10,
+        height: 10,
       },
       movement: { x: 0, y: 0 },
-      width: 10,
-      height: 10,
     },
     {
-      position: {
-        x: 300,
-        y: 500,
+      aabb: {
+        position: {
+          x: 300,
+          y: 500,
+        },
+        width: 10,
+        height: 10,
       },
       movement: { x: 0, y: 0 },
-      width: 10,
-      height: 10,
     },
     {
-      position: {
-        x: 200,
-        y: 300,
+      aabb: {
+        position: {
+          x: 200,
+          y: 300,
+        },
+        width: 10,
+        height: 10,
       },
       movement: { x: 0, y: 0 },
-      width: 10,
-      height: 10,
     },
   ],
   playerBullets: [],
@@ -163,8 +173,8 @@ function handlePlayerMovement(player: Mob, keyboardState: KeyboardState) {
     player.movement.x = 0;
   }
 
-  player.position.x += player.movement.x;
-  player.position.y += player.movement.y;
+  player.aabb.position.x += player.movement.x;
+  player.aabb.position.y += player.movement.y;
 }
 
 function playerIsStill(player: Mob) {
@@ -173,36 +183,38 @@ function playerIsStill(player: Mob) {
 
 function createPlayerBullet(startingPoint: Vector, direction: Vector) {
   return {
-    position: {
-      x: startingPoint.x,
-      y: startingPoint.y,
+    aabb: {
+      position: {
+        x: startingPoint.x,
+        y: startingPoint.y,
+      },
+      width: 2,
+      height: 2,
     },
     movement: {
       x: direction.x, // TODO: fix the speed, this is just the direction
       y: direction.y,
     },
     ttl: 250,
-    width: 2,
-    height: 2,
   };
 }
 
 function updateBullets(bullets: Bullet[]) {
   for (const bullet of bullets) {
-    bullet.position.x += bullet.movement.x;
-    bullet.position.y += bullet.movement.y;
+    bullet.aabb.position.x += bullet.movement.x;
+    bullet.aabb.position.y += bullet.movement.y;
 
     bullet.ttl = bullet.ttl - 1;
   }
 }
 
 function closestMobToPlayer(player: Mob, mobs: Mob[]) {
-  const ppos = player.position;
+  const ppos = player.aabb.position;
 
   let closestMob = null;
   let smallestDistance = 10_000;
   for (const mob of mobs) {
-    const mpos = mob.position;
+    const mpos = mob.aabb.position;
 
     const distance = Math.sqrt((ppos.x - mpos.x) ** 2 + (ppos.y - mpos.y) ** 2);
     if (distance < smallestDistance) {
@@ -237,14 +249,14 @@ function main() {
       weaponTimer = 0;
       const closestMob = closestMobToPlayer(player, gameState.mobs);
       if (closestMob) {
-        const directionX = closestMob.position.x - player.position.x;
-        const directionY = closestMob.position.y - player.position.y;
+        const directionX = closestMob.aabb.position.x - player.aabb.position.x;
+        const directionY = closestMob.aabb.position.y - player.aabb.position.y;
         const lenght = Math.sqrt(directionX ** 2 + directionY ** 2);
         const normDirX = directionX / lenght;
         const normDirY = directionY / lenght;
 
         gameState.playerBullets.push(
-          createPlayerBullet(gameState.player.position, {
+          createPlayerBullet(gameState.player.aabb.position, {
             x: normDirX,
             y: normDirY,
           })
@@ -257,7 +269,7 @@ function main() {
     for (const mobIndex in gameState.mobs) {
       const mob = gameState.mobs[mobIndex];
       for (const bullet of gameState.playerBullets) {
-        if (detectCollisionBetween(mob, bullet)) {
+        if (detectCollisionBetween(mob.aabb, bullet.aabb)) {
           destroyedMobIndexes.push(mobIndex as any);
         }
       }
@@ -283,7 +295,7 @@ function main() {
   render(globalCanvas, alpha, gameState);
 }
 
-function detectCollisionBetween(lhs: Mob, rhs: Mob) {
+function detectCollisionBetween(lhs: AABB, rhs: AABB) {
   return (
     lhs.position.x < rhs.position.x + rhs.width &&
     lhs.position.x + lhs.width > rhs.position.x &&
@@ -294,7 +306,11 @@ function detectCollisionBetween(lhs: Mob, rhs: Mob) {
 
 main();
 
-function render(canvas: HTMLCanvasElement, alpha: number, gameState: any) {
+function render(
+  canvas: HTMLCanvasElement,
+  alpha: number,
+  gameState: GameState
+) {
   const ctx = canvas.getContext("2d");
   if (!ctx) {
     console.error("canvas context is null");
@@ -305,24 +321,29 @@ function render(canvas: HTMLCanvasElement, alpha: number, gameState: any) {
 
   ctx.fillStyle = "#FF0000";
   ctx.fillRect(
-    gameState.player.position.x + alpha * gameState.player.movement.x,
-    gameState.player.position.y + alpha * gameState.player.movement.y,
-    gameState.player.width,
-    gameState.player.height
+    gameState.player.aabb.position.x + alpha * gameState.player.movement.x,
+    gameState.player.aabb.position.y + alpha * gameState.player.movement.y,
+    gameState.player.aabb.width,
+    gameState.player.aabb.height
   );
 
   ctx.fillStyle = "#00a000";
   for (const mob of gameState.mobs) {
-    ctx.fillRect(mob.position.x, mob.position.y, mob.width, mob.height);
+    ctx.fillRect(
+      mob.aabb.position.x,
+      mob.aabb.position.y,
+      mob.aabb.width,
+      mob.aabb.height
+    );
   }
 
   ctx.fillStyle = "#090909";
   for (const bullet of gameState.playerBullets) {
     ctx.fillRect(
-      bullet.position.x,
-      bullet.position.y,
-      bullet.width,
-      bullet.height
+      bullet.aabb.position.x,
+      bullet.aabb.position.y,
+      bullet.aabb.width,
+      bullet.aabb.height
     );
   }
 }
