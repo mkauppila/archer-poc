@@ -118,7 +118,7 @@ const gameState: GameState = {
     {
       aabb: {
         position: {
-          x: 100,
+          x: 150,
           y: 300,
         },
         width: 10,
@@ -155,69 +155,49 @@ const gameState: GameState = {
   boundaries: [
     // left
     {
-      height: 800,
+      height: 880,
       width: 10,
       position: {
-        x: 0,
+        x: -10,
         y: 0,
       },
     },
     // right
     {
-      height: 800,
+      height: 8800,
       width: 10,
       position: {
-        x: 390,
+        x: 440,
         y: 0,
       },
     },
     // top
     {
       height: 10,
-      width: 400,
+      width: 440,
       position: {
         x: 0,
-        y: 0,
+        y: -10,
       },
     },
     // bottom
     {
-      height: 10,
-      width: 400,
+      height: 16,
+      width: 440,
       position: {
         x: 0,
-        y: 790,
-      },
-    },
-    // test
-    {
-      height: 32,
-      width: 12,
-      position: {
-        x: 150,
-        y: 100,
+        y: 880,
       },
     },
   ],
-  // transform the level into blocks with their own aabb's and types
-  // mathc player to all, map all mobs to all
 };
 
-// Always rendered at the same position
-// All tiles have a aabb, for collision blocks
-// AABB can be created on while
-//   calculate tiles position in x,y and add the w and h
-// this can be used to check collision
-// prevent mobs moving through (unless they can move through)
-
-// tile based maps are simpler the generate, store and modify without an editor
 type Level = {
-  position: Vector;
-  // widthInTiles: number;
-  // heightInTiles: number;
   blocks: Block[];
-  // tileWidth: number;
-  // tileHeight: number;
+  tileWidthInPx: number;
+  tileHeightInPx: number;
+  widthInTiles: number;
+  heightInTiles: number;
 };
 
 type Block = {
@@ -225,60 +205,69 @@ type Block = {
   aabb: AABB;
 };
 
-// Tile types
-//  0 - nothing
-//  1 - wall
-
 function generateLevel(): Level {
-  const widthInTiles = 19;
-  const heightInTiles = 39;
-  const tileHeight = 20;
-  const tileWidth = 20;
+  const widthInTiles = 11;
+  const heightInTiles = 22;
+  const tileHeight = Math.floor(880 / heightInTiles);
+  const tileWidth = Math.floor(440 / widthInTiles);
 
   const generateBlocks = (width: number, height: number): Block[] => {
-    const tiles: Block[] = [];
-    let index = 0;
-    for (let w = 0; w < width; ++w) {
-      for (let h = 0; h < height; ++h) {
-        if (index >= 20) {
-          console.log("add wall");
-          index = 0;
-          tiles.push({
-            type: "wall",
-            aabb: {
-              position: {
-                x: w * tileWidth,
-                y: w + h * tileHeight,
-              },
-              width: tileWidth,
-              height: tileHeight,
-            },
-          });
+    const blocks: Block[] = [];
 
-          // tiles[w + h * width] = 1;
-        } else {
-          // tiles[w + h * width] = 0;
-        }
-        index++;
-      }
+    let y = 4;
+    for (let x = 2; x < 9; ++x) {
+      blocks.push({
+        type: "wall",
+        aabb: {
+          position: {
+            x: x * tileWidth,
+            y: y * tileHeight,
+          },
+          width: tileWidth,
+          height: tileHeight,
+        },
+      });
     }
 
-    return tiles;
+    for (let y = 12; y < 18; ++y) {
+      let x = 2;
+      blocks.push({
+        type: "wall",
+        aabb: {
+          position: {
+            x: x * tileWidth,
+            y: y * tileHeight,
+          },
+          width: tileWidth,
+          height: tileHeight,
+        },
+      });
+
+      x = 8;
+      blocks.push({
+        type: "wall",
+        aabb: {
+          position: {
+            x: x * tileWidth,
+            y: y * tileHeight,
+          },
+          width: tileWidth,
+          height: tileHeight,
+        },
+      });
+    }
+
+    return blocks;
   };
 
   return {
-    position: {
-      x: 10,
-      y: 10,
-    },
     blocks: generateBlocks(widthInTiles, heightInTiles),
-    // widthInTiles,
-    // heightInTiles,
+    tileWidthInPx: tileWidth,
+    tileHeightInPx: tileHeight,
+    widthInTiles,
+    heightInTiles,
   };
 }
-
-// Mob collision to tile, check all the mobs corners of their aabb, if one of them collides
-// do -> nullify mobs movement to that direction
 
 function handlePlayerMovement(player: Mob, keyboardState: KeyboardState) {
   const speed = 2;
@@ -325,7 +314,7 @@ function createPlayerBullet(startingPoint: Vector, direction: Vector) {
       x: direction.x, // TODO: fix the speed, this is just the direction
       y: direction.y,
     },
-    ttl: 250,
+    ttl: 192,
   };
 }
 
@@ -358,7 +347,11 @@ function closestMobToPlayer(player: Mob, mobs: Mob[]) {
 const weaponSpeedInMs = 200;
 let weaponTimer = 0;
 
-function isMobCollidingWithBoundaries(player: Mob, boundaries: AABB[]) {
+function isMobCollidingWithBoundaries(
+  player: Mob,
+  boundaries: AABB[],
+  handler: (mob: Mob, target: AABB, delta: Vector) => void
+) {
   const updated: AABB = {
     position: {
       x: player.aabb.position.x, // + player.movement.x,
@@ -398,6 +391,8 @@ function isMobCollidingWithBoundaries(player: Mob, boundaries: AABB[]) {
           player.aabb.position.y -= dy;
         }
       }
+
+      handler(player, boundary, { x: dx, y: dy });
 
       /*
       const velocity = player.movement;
@@ -445,7 +440,7 @@ function isMobCollidingWithBoundaries(player: Mob, boundaries: AABB[]) {
       }
       */
 
-      console.log("collision depth: ", dx, dy);
+      // console.log("collision depth: ", dx, dy);
     }
   }
 }
@@ -470,13 +465,11 @@ function main() {
     // after hte collision detection has been done (for the future state)
     handlePlayerMovement(player, keyboardState);
 
-    // check if player is blocked by tiles or the edges of the level
-    // isMobCollidingWithLevel(player, gameState.level);
-
-    isMobCollidingWithBoundaries(player, [
-      ...gameState.boundaries,
-      ...gameState.level.blocks.map((b) => b.aabb),
-    ]);
+    isMobCollidingWithBoundaries(
+      player,
+      [...gameState.boundaries, ...gameState.level.blocks.map((b) => b.aabb)],
+      () => {}
+    );
 
     if (playerIsStill(player) && weaponTimer >= weaponSpeedInMs) {
       weaponTimer = 0;
@@ -497,6 +490,22 @@ function main() {
       }
     }
     updateBullets(gameState.playerBullets);
+
+    for (const playerBullet of gameState.playerBullets) {
+      isMobCollidingWithBoundaries(
+        playerBullet,
+        [...gameState.boundaries, ...gameState.level.blocks.map((b) => b.aabb)],
+        (bullet, _target, delta) => {
+          console.log("bullet collision response");
+
+          if (delta.x > delta.y) {
+            bullet.movement.x = -bullet.movement.x;
+          } else {
+            bullet.movement.y = -bullet.movement.y;
+          }
+        }
+      );
+    }
 
     let destroyedMobIndexes: number[] = [];
     for (const mobIndex in gameState.mobs) {
