@@ -393,54 +393,6 @@ function isMobCollidingWithBoundaries(
       }
 
       handler(player, boundary, { x: dx, y: dy });
-
-      /*
-      const velocity = player.movement;
-      const xAxisTimeToCollide =
-        velocity.x !== 0 ? Math.abs(dx / velocity.x) : 0;
-      const yAxisTimeToCollide =
-        velocity.y !== 0 ? Math.abs(dy / velocity.y) : 0;
-
-      let shortestTime = 0;
-
-      // x-axis collision
-      if (velocity.x !== 0 && velocity.y === 0) {
-        shortestTime = xAxisTimeToCollide;
-        player.aabb.position.x += dx; //shortestTime * velocity.x;
-      }
-      // y-axis collision
-      else if (velocity.x === 0 && velocity.y !== 0) {
-        shortestTime = yAxisTimeToCollide;
-        player.aabb.position.y += dy; // shortestTime * velocity.y;
-      }
-      // collision on both axis
-      else {
-        shortestTime = Math.min(
-          Math.abs(xAxisTimeToCollide),
-          Math.abs(yAxisTimeToCollide)
-        );
-        player.aabb.position.x += dx; //shortestTime * velocity.x;
-        player.aabb.position.y += dy; //shortestTime * velocity.y;
-      }
-      */
-
-      /*
-      if (player.movement.x > 0) {
-        player.aabb.position.x += dx;
-      }
-      if (player.movement.x < 0) {
-        player.aabb.position.x -= dx;
-      }
-
-      if (player.movement.y > 0) {
-        player.aabb.position.y += dy;
-      }
-      if (player.movement.y < 0) {
-        player.aabb.position.y -= dy;
-      }
-      */
-
-      // console.log("collision depth: ", dx, dy);
     }
   }
 }
