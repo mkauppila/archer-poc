@@ -5,8 +5,10 @@ import path from "path";
 
 function createWindow() {
   const win = new BrowserWindow({
-    width: 400,
-    height: 800,
+    width: 440,
+    height: 880,
+    x: 100,
+    y: 100,
     useContentSize: true,
     resizable: false,
     webPreferences: {

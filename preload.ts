@@ -85,16 +85,18 @@ type Bullet = {
   ttl: number;
 } & Mob;
 
-type GameState = {
-  player: Mob;
-  mobs: Mob[];
-  playerBullets: Bullet[];
-};
-
 type AABB = {
   position: Vector;
   width: number;
   height: number;
+};
+
+type GameState = {
+  player: Mob;
+  mobs: Mob[];
+  playerBullets: Bullet[];
+  level: Level;
+  boundaries: AABB[];
 };
 
 const gameState: GameState = {
@@ -102,7 +104,7 @@ const gameState: GameState = {
     aabb: {
       position: {
         x: 200,
-        y: 600,
+        y: 550,
       },
       width: 10,
       height: 10,
@@ -148,7 +150,135 @@ const gameState: GameState = {
     },
   ],
   playerBullets: [],
+  level: generateLevel(),
+  // 4 x AABB to border the area
+  boundaries: [
+    // left
+    {
+      height: 800,
+      width: 10,
+      position: {
+        x: 0,
+        y: 0,
+      },
+    },
+    // right
+    {
+      height: 800,
+      width: 10,
+      position: {
+        x: 390,
+        y: 0,
+      },
+    },
+    // top
+    {
+      height: 10,
+      width: 400,
+      position: {
+        x: 0,
+        y: 0,
+      },
+    },
+    // bottom
+    {
+      height: 10,
+      width: 400,
+      position: {
+        x: 0,
+        y: 790,
+      },
+    },
+    // test
+    {
+      height: 32,
+      width: 12,
+      position: {
+        x: 150,
+        y: 100,
+      },
+    },
+  ],
+  // transform the level into blocks with their own aabb's and types
+  // mathc player to all, map all mobs to all
 };
+
+// Always rendered at the same position
+// All tiles have a aabb, for collision blocks
+// AABB can be created on while
+//   calculate tiles position in x,y and add the w and h
+// this can be used to check collision
+// prevent mobs moving through (unless they can move through)
+
+// tile based maps are simpler the generate, store and modify without an editor
+type Level = {
+  position: Vector;
+  // widthInTiles: number;
+  // heightInTiles: number;
+  blocks: Block[];
+  // tileWidth: number;
+  // tileHeight: number;
+};
+
+type Block = {
+  type: "wall";
+  aabb: AABB;
+};
+
+// Tile types
+//  0 - nothing
+//  1 - wall
+
+function generateLevel(): Level {
+  const widthInTiles = 19;
+  const heightInTiles = 39;
+  const tileHeight = 20;
+  const tileWidth = 20;
+
+  const generateBlocks = (width: number, height: number): Block[] => {
+    const tiles: Block[] = [];
+    let index = 0;
+    for (let w = 0; w < width; ++w) {
+      for (let h = 0; h < height; ++h) {
+        if (index >= 20) {
+          console.log("add wall");
+          index = 0;
+          tiles.push({
+            type: "wall",
+            aabb: {
+              position: {
+                x: w * tileWidth,
+                y: w + h * tileHeight,
+              },
+              width: tileWidth,
+              height: tileHeight,
+            },
+          });
+
+          // tiles[w + h * width] = 1;
+        } else {
+          // tiles[w + h * width] = 0;
+        }
+        index++;
+      }
+    }
+
+    return tiles;
+  };
+
+  return {
+    position: {
+      x: 10,
+      y: 10,
+    },
+    blocks: generateBlocks(widthInTiles, heightInTiles),
+    // widthInTiles,
+    // heightInTiles,
+  };
+}
+
+// Mob collision to tile, check all the mobs corners of their aabb, if one of them collides
+// do -> nullify mobs movement to that direction
 
 function handlePlayerMovement(player: Mob, keyboardState: KeyboardState) {
   const speed = 2;
@@ -228,6 +358,98 @@ function closestMobToPlayer(player: Mob, mobs: Mob[]) {
 const weaponSpeedInMs = 200;
 let weaponTimer = 0;
 
+function isMobCollidingWithBoundaries(player: Mob, boundaries: AABB[]) {
+  const updated: AABB = {
+    position: {
+      x: player.aabb.position.x, // + player.movement.x,
+      y: player.aabb.position.y, // + player.movement.y,
+    },
+    height: player.aabb.height,
+    width: player.aabb.width,
+  };
+  for (const boundary of boundaries) {
+    if (detectCollisionBetween(updated, boundary)) {
+      let dx = 0;
+      let dy = 0;
+
+      if (updated.position.x < boundary.position.x) {
+        dx = boundary.position.x - (updated.position.x + updated.width);
+      } else {
+        dx = updated.position.x - (boundary.position.x + boundary.width);
+      }
+
+      if (updated.position.y < boundary.position.y) {
+        dy = boundary.position.y - (updated.position.y + updated.height);
+      } else {
+        dy = updated.position.y - (boundary.position.y + boundary.height);
+      }
+
+      // collision on x-axis
+      if (Math.abs(dx) < Math.abs(dy)) {
+        if (player.movement.x > 0) {
+          player.aabb.position.x += dx;
+        } else {
+          player.aabb.position.x -= dx;
+        }
+      } else {
+        if (player.movement.y > 0) {
+          player.aabb.position.y += dy;
+        } else {
+          player.aabb.position.y -= dy;
+        }
+      }
+
+      /*
+      const velocity = player.movement;
+      const xAxisTimeToCollide =
+        velocity.x !== 0 ? Math.abs(dx / velocity.x) : 0;
+      const yAxisTimeToCollide =
+        velocity.y !== 0 ? Math.abs(dy / velocity.y) : 0;
+
+      let shortestTime = 0;
+
+      // x-axis collision
+      if (velocity.x !== 0 && velocity.y === 0) {
+        shortestTime = xAxisTimeToCollide;
+        player.aabb.position.x += dx; //shortestTime * velocity.x;
+      }
+      // y-axis collision
+      else if (velocity.x === 0 && velocity.y !== 0) {
+        shortestTime = yAxisTimeToCollide;
+        player.aabb.position.y += dy; // shortestTime * velocity.y;
+      }
+      // collision on both axis
+      else {
+        shortestTime = Math.min(
+          Math.abs(xAxisTimeToCollide),
+          Math.abs(yAxisTimeToCollide)
+        );
+        player.aabb.position.x += dx; //shortestTime * velocity.x;
+        player.aabb.position.y += dy; //shortestTime * velocity.y;
+      }
+      */
+
+      /*
+      if (player.movement.x > 0) {
+        player.aabb.position.x += dx;
+      }
+      if (player.movement.x < 0) {
+        player.aabb.position.x -= dx;
+      }
+
+      if (player.movement.y > 0) {
+        player.aabb.position.y += dy;
+      }
+      if (player.movement.y < 0) {
+        player.aabb.position.y -= dy;
+      }
+      */
+
+      console.log("collision depth: ", dx, dy);
+    }
+  }
+}
+
 function main() {
   requestAnimationFrame(main);
 
@@ -244,7 +466,18 @@ function main() {
     weaponTimer += logicFrameRateInMs;
 
     const player = gameState.player;
+    // TODO: do the actual update of player's position
+    // after hte collision detection has been done (for the future state)
     handlePlayerMovement(player, keyboardState);
+
+    // check if player is blocked by tiles or the edges of the level
+    // isMobCollidingWithLevel(player, gameState.level);
+
+    isMobCollidingWithBoundaries(player, [
+      ...gameState.boundaries,
+      ...gameState.level.blocks.map((b) => b.aabb),
+    ]);
+
     if (playerIsStill(player) && weaponTimer >= weaponSpeedInMs) {
       weaponTimer = 0;
       const closestMob = closestMobToPlayer(player, gameState.mobs);
@@ -318,6 +551,44 @@ function render(
   }
 
   ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // render level
+  const level = gameState.level;
+  // render the base map
+  let switcher = false;
+  for (let y = 0; y < level.heightInTiles; ++y) {
+    for (let x = 0; x < level.widthInTiles; ++x) {
+      ctx.fillStyle = switcher ? "rgb(117, 139, 246)" : "rgb(113, 134, 246)";
+      const px = x * level.tileWidthInPx;
+      const py = y * level.tileWidthInPx;
+      ctx.fillRect(px, py, level.tileWidthInPx, level.tileHeightInPx);
+
+      switcher = !switcher;
+    }
+  }
+
+  // divider line rgb(153, 168, 244)
+
+  ctx.fillStyle = "rgb(184, 222, 250)";
+  for (const block of level.blocks) {
+    ctx.fillRect(
+      block.aabb.position.x,
+      block.aabb.position.y,
+      block.aabb.width,
+      block.aabb.height
+    );
+  }
+
+  /*
+  for (const boundary of gameState.boundaries) {
+    ctx.fillRect(
+      boundary.position.x,
+      boundary.position.y,
+      boundary.width,
+      boundary.height
+    );
+  }
+  */
 
   ctx.fillStyle = "#FF0000";
   ctx.fillRect(
