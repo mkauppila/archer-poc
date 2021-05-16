@@ -496,8 +496,14 @@ function logicStep(logicFrameRateInMs: number, gameState: GameState) {
     bullet.movementFn(bullet, logicFrameRateInMs);
   }
 
-  for (const bullet of gameState.playerBullets) {
+  for (const bullet of [...gameState.playerBullets, ...gameState.mobBullets]) {
     bullet.ttl -= 1;
+  }
+
+  for (const bullet of gameState.mobBullets) {
+    if (detectCollisionBetween(player.aabb, bullet.aabb)) {
+      console.log("player got hit!");
+    }
   }
 
   for (const playerBullet of gameState.playerBullets) {
@@ -505,8 +511,6 @@ function logicStep(logicFrameRateInMs: number, gameState: GameState) {
       playerBullet,
       [...gameState.boundaries, ...gameState.level.blocks.map((b) => b.aabb)],
       (bullet, _target, delta) => {
-        console.log("bullet collision response");
-
         if (delta.x > delta.y) {
           bullet.movement.x = -bullet.movement.x;
         } else {
@@ -516,10 +520,18 @@ function logicStep(logicFrameRateInMs: number, gameState: GameState) {
     );
   }
 
-  for (const bullet of gameState.mobBullets) {
-    if (detectCollisionBetween(player.aabb, bullet.aabb)) {
-      console.log("player got hit!");
-    }
+  for (const mobBullet of gameState.mobBullets) {
+    isMobCollidingWithBoundaries(
+      mobBullet,
+      [...gameState.boundaries, ...gameState.level.blocks.map((b) => b.aabb)],
+      (bullet, _target, delta) => {
+        if (delta.x > delta.y) {
+          bullet.movement.x = -bullet.movement.x;
+        } else {
+          bullet.movement.y = -bullet.movement.y;
+        }
+      }
+    );
   }
 
   let destroyedMobIndexes: number[] = [];
@@ -535,6 +547,7 @@ function logicStep(logicFrameRateInMs: number, gameState: GameState) {
     gameState.mobs.splice(index, 1);
   }
 
+  // player bullets
   let deleteIndexes: number[] = [];
   for (const bulletIndex in gameState.playerBullets) {
     if (gameState.playerBullets[bulletIndex].ttl <= 0) {
@@ -543,6 +556,17 @@ function logicStep(logicFrameRateInMs: number, gameState: GameState) {
   }
   for (const index of deleteIndexes.reverse()) {
     gameState.playerBullets.splice(index, 1);
+  }
+
+  // mob bullets
+  deleteIndexes = [];
+  for (const bulletIndex in gameState.mobBullets) {
+    if (gameState.mobBullets[bulletIndex].ttl <= 0) {
+      deleteIndexes.push(bulletIndex as any);
+    }
+  }
+  for (const index of deleteIndexes.reverse()) {
+    gameState.mobBullets.splice(index, 1);
   }
 }
 
