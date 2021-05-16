@@ -34,7 +34,11 @@ enum MobState {
 type Mob = {
   aabb: AABB;
   movement: Vector;
-  // Refcator, this does also affect player! Can be not-optional!
+  movementFn: (
+    mob: Mob,
+    stepDuration: number,
+    input?: input.KeyboardState
+  ) => void;
   state?: MobState;
   stateTimer?: number;
   weaponTimer?: number;
@@ -73,6 +77,7 @@ const gameState: GameState = {
       x: 0,
       y: 0,
     },
+    movementFn: handlePlayerMovement,
   },
   mobs: [
     {
@@ -86,6 +91,7 @@ const gameState: GameState = {
       state: MobState.moving,
       stateTimer: 0,
       weaponTimer: 0,
+      movementFn: handleMobMovementLogic,
     },
     {
       aabb: {
@@ -98,6 +104,7 @@ const gameState: GameState = {
       state: MobState.moving,
       stateTimer: 0,
       weaponTimer: 0,
+      movementFn: handleMobMovementLogic,
     },
     {
       aabb: {
@@ -110,6 +117,7 @@ const gameState: GameState = {
       state: MobState.moving,
       stateTimer: 0,
       weaponTimer: 0,
+      movementFn: handleMobMovementLogic,
     },
   ],
   endPortal: {
@@ -225,7 +233,15 @@ function generateLevel(): Level {
   };
 }
 
-function handlePlayerMovement(player: Mob, keyboardState: input.KeyboardState) {
+function handlePlayerMovement(
+  player: Mob,
+  _stepDuration: number,
+  keyboardState?: input.KeyboardState
+) {
+  if (!keyboardState) {
+    return;
+  }
+
   const speed = 2;
   if (keyboardState.up) {
     player.movement.y = -speed;
@@ -269,16 +285,19 @@ function createPlayerBullet(startingPoint: Vector, direction: Vector) {
       y: direction.y,
     },
     ttl: 192,
+    movementFn: updateBulletMovement,
   };
 }
 
-function updateBullets(bullets: Bullet[]) {
-  for (const bullet of bullets) {
-    bullet.aabb.x += bullet.movement.x;
-    bullet.aabb.y += bullet.movement.y;
+function updateBulletMovement(
+  bullet: Mob,
+  _stepDuration: number,
+  _keyboardState?: input.KeyboardState
+) {
+  bullet.aabb.x += bullet.movement.x;
+  bullet.aabb.y += bullet.movement.y;
 
-    bullet.ttl = bullet.ttl - 1;
-  }
+  // bullet.ttl = bullet.ttl - 1;
 }
 
 function closestMobToPlayer(player: Mob, mobs: Mob[]) {
@@ -349,7 +368,6 @@ function isMobCollidingWithBoundaries(
 
 function handleMobMovementLogic(mob: Mob, stepDuration: number) {
   const movementTime = 1000;
-  const shootingTime = 1000;
 
   if (!mob.stateTimer) {
     mob.stateTimer = 0;
@@ -363,7 +381,6 @@ function handleMobMovementLogic(mob: Mob, stepDuration: number) {
       mob.state = MobState.shooting;
     } else {
       if (mob.movement.x === 0 && mob.movement.y === 0) {
-        // randomize a new movmenet direction
         mob.movement.x = Math.random() * 2 - 1;
         mob.movement.y = Math.random() * 2 - 1;
       }
@@ -371,20 +388,20 @@ function handleMobMovementLogic(mob: Mob, stepDuration: number) {
       mob.aabb.x += mob.movement.x;
       mob.aabb.y += mob.movement.y;
     }
-    // move to direction until timer is up
-    // then movement = 0
-    // mob.state = MobState.shooting
-  } else if (mob.state === MobState.shooting) {
-    if (mob.stateTimer > shootingTime) {
+  }
+}
+
+function handleMobShootingLogic(mob: Mob, stepDuration: number) {
+  const shootingTime = 1000;
+
+  if (mob.state === MobState.shooting) {
+    if (mob.stateTimer! > shootingTime) {
       mob.stateTimer = 0;
       mob.movement = { x: 0, y: 0 };
       mob.state = MobState.moving;
     }
     console.log("mob is shooting");
   }
-  // what is the current state
-  // moving to a direction?
-  // or is this dude shooting at the moment
 }
 
 function logicStep(logicFrameRateInMs: number, gameState: GameState) {
@@ -393,10 +410,11 @@ function logicStep(logicFrameRateInMs: number, gameState: GameState) {
   const player = gameState.player;
   // TODO: do the actual update of player's position
   // after hte collision detection has been done (for the future state)
-  handlePlayerMovement(player, input.keyboardState);
+  // handlePlayerMovement(player, logicFrameRateInMs, input.keyboardState);
+  player.movementFn(player, logicFrameRateInMs, input.keyboardState);
 
-  for (const mob of gameState.mobs) {
-    handleMobMovementLogic(mob, logicFrameRateInMs);
+  for (const mob of [...gameState.mobs, player]) {
+    mob.movementFn(mob, logicFrameRateInMs, undefined);
   }
 
   isMobCollidingWithBoundaries(
@@ -418,6 +436,10 @@ function logicStep(logicFrameRateInMs: number, gameState: GameState) {
     gameState.mobs.length === 0
   ) {
     // TODO Generate another level!
+  }
+
+  for (const mob of gameState.mobs) {
+    handleMobShootingLogic(mob, logicFrameRateInMs);
   }
 
   if (playerIsStill(player) && weaponTimer >= weaponSpeedInMs) {
@@ -444,7 +466,6 @@ function logicStep(logicFrameRateInMs: number, gameState: GameState) {
       );
     }
   }
-  updateBullets(gameState.playerBullets);
 
   for (const mob of gameState.mobs) {
     mob.weaponTimer! += logicFrameRateInMs;
@@ -471,7 +492,13 @@ function logicStep(logicFrameRateInMs: number, gameState: GameState) {
       );
     }
   }
-  updateBullets(gameState.mobBullets);
+  for (const bullet of [...gameState.playerBullets, ...gameState.mobBullets]) {
+    bullet.movementFn(bullet, logicFrameRateInMs);
+  }
+
+  for (const bullet of gameState.playerBullets) {
+    bullet.ttl -= 1;
+  }
 
   for (const playerBullet of gameState.playerBullets) {
     isMobCollidingWithBoundaries(
