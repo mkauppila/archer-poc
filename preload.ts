@@ -39,6 +39,7 @@ type Mob = {
     stepDuration: number,
     input?: input.KeyboardState
   ) => void;
+  health: number;
   state?: MobState;
   stateTimer?: number;
   weaponTimer?: number;
@@ -60,6 +61,12 @@ type GameState = {
   boundaries: AABB[];
 };
 
+type Message = {
+  position: Vector;
+  message: string;
+  timer: number;
+};
+
 type LevelState = {
   player: Mob;
   mobs: Mob[];
@@ -67,6 +74,7 @@ type LevelState = {
   mobBullets: Bullet[];
   level: Level;
   endPortal: AABB;
+  messages: Message[];
 };
 
 const gameState: GameState = {
@@ -130,6 +138,7 @@ function createLevelState(): LevelState {
         x: 0,
         y: 0,
       },
+      health: 100,
       movementFn: handlePlayerMovement,
     },
     mobs: [
@@ -144,6 +153,7 @@ function createLevelState(): LevelState {
         state: MobState.moving,
         stateTimer: 0,
         weaponTimer: 0,
+        health: 40,
         movementFn: handleMobMovementLogic,
       },
       {
@@ -157,6 +167,7 @@ function createLevelState(): LevelState {
         state: MobState.moving,
         stateTimer: 0,
         weaponTimer: 0,
+        health: 40,
         movementFn: handleMobMovementLogic,
       },
       {
@@ -170,6 +181,7 @@ function createLevelState(): LevelState {
         state: MobState.moving,
         stateTimer: 0,
         weaponTimer: 0,
+        health: 40,
         movementFn: handleMobMovementLogic,
       },
     ],
@@ -182,6 +194,7 @@ function createLevelState(): LevelState {
     playerBullets: [],
     mobBullets: [],
     level: generateLevel(),
+    messages: [],
   };
 }
 
@@ -295,6 +308,7 @@ function createPlayerBullet(startingPoint: Vector, direction: Vector) {
       y: direction.y,
     },
     ttl: 192,
+    health: 40,
     movementFn: updateBulletMovement,
   };
 }
@@ -410,7 +424,6 @@ function handleMobShootingLogic(mob: Mob, stepDuration: number) {
       mob.movement = { x: 0, y: 0 };
       mob.state = MobState.moving;
     }
-    console.log("mob is shooting");
   }
 }
 
@@ -518,9 +531,18 @@ function logicStep(logicFrameRateInMs: number, state: GameState) {
     bullet.ttl -= 1;
   }
 
+  // player vs mob bullets
   for (const bullet of levelState.mobBullets) {
     if (detectCollisionBetween(player.aabb, bullet.aabb)) {
-      state.levelState = createLevelState();
+      levelState.messages.push({
+        message: "-10",
+        position: { x: player.aabb.x, y: player.aabb.y },
+        timer: 0,
+      });
+      player.health -= 10;
+      if (player.health < 0) {
+        state.levelState = createLevelState();
+      }
     }
   }
 
@@ -552,12 +574,24 @@ function logicStep(logicFrameRateInMs: number, state: GameState) {
     );
   }
 
+  // mob vs player bullets
   let destroyedMobIndexes: number[] = [];
   for (const mobIndex in levelState.mobs) {
     const mob = levelState.mobs[mobIndex];
     for (const bullet of levelState.playerBullets) {
       if (detectCollisionBetween(mob.aabb, bullet.aabb)) {
-        destroyedMobIndexes.push(mobIndex as any);
+        levelState.messages.push({
+          message: "-10",
+          position: { x: mob.aabb.x, y: mob.aabb.y },
+          timer: 0,
+        });
+
+        // showMessage({x: mob.aabb.x, y: mob.aabb.y}, "-10", 300)
+        mob.health -= 10;
+        console.log("mob health ", mob.health);
+        if (mob.health < 0) {
+          destroyedMobIndexes.push(mobIndex as any);
+        }
       }
     }
   }
@@ -585,6 +619,20 @@ function logicStep(logicFrameRateInMs: number, state: GameState) {
   }
   for (const index of deleteIndexes.reverse()) {
     levelState.mobBullets.splice(index, 1);
+  }
+
+  // update messages
+  const deleteMessageIndexes: number[] = [];
+  for (const idx in levelState.messages) {
+    const message = levelState.messages[idx];
+    message.timer += logicFrameRateInMs;
+
+    if (message.timer > 500) {
+      deleteMessageIndexes.push(idx as any);
+    }
+  }
+  for (const index of deleteMessageIndexes.reverse()) {
+    levelState.messages.splice(index, 1);
   }
 }
 
@@ -698,5 +746,9 @@ function render(canvas: HTMLCanvasElement, alpha: number, state: GameState) {
       bullet.aabb.width,
       bullet.aabb.height
     );
+  }
+
+  for (const message of levelState.messages) {
+    ctx.fillText(message.message, message.position.x, message.position.y);
   }
 }
