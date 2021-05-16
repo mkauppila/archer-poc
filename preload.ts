@@ -56,79 +56,21 @@ type AABB = {
 };
 
 type GameState = {
+  levelState: LevelState;
+  boundaries: AABB[];
+};
+
+type LevelState = {
   player: Mob;
   mobs: Mob[];
   playerBullets: Bullet[];
   mobBullets: Bullet[];
   level: Level;
-  boundaries: AABB[];
   endPortal: AABB;
 };
 
 const gameState: GameState = {
-  player: {
-    aabb: {
-      x: 200,
-      y: 550,
-      width: 24,
-      height: 24,
-    },
-    movement: {
-      x: 0,
-      y: 0,
-    },
-    movementFn: handlePlayerMovement,
-  },
-  mobs: [
-    {
-      aabb: {
-        x: 150,
-        y: 300,
-        width: 24,
-        height: 24,
-      },
-      movement: { x: 0, y: 0 },
-      state: MobState.moving,
-      stateTimer: 0,
-      weaponTimer: 0,
-      movementFn: handleMobMovementLogic,
-    },
-    {
-      aabb: {
-        x: 300,
-        y: 500,
-        width: 24,
-        height: 24,
-      },
-      movement: { x: 0, y: 0 },
-      state: MobState.moving,
-      stateTimer: 0,
-      weaponTimer: 0,
-      movementFn: handleMobMovementLogic,
-    },
-    {
-      aabb: {
-        x: 200,
-        y: 300,
-        width: 24,
-        height: 24,
-      },
-      movement: { x: 0, y: 0 },
-      state: MobState.moving,
-      stateTimer: 0,
-      weaponTimer: 0,
-      movementFn: handleMobMovementLogic,
-    },
-  ],
-  endPortal: {
-    x: 5 * 40,
-    y: 0,
-    width: 40,
-    height: 40,
-  },
-  playerBullets: [],
-  mobBullets: [],
-  level: generateLevel(),
+  levelState: createLevelState(),
   // 4 x AABB to border the area
   boundaries: [
     // left
@@ -174,6 +116,74 @@ type Block = {
   type: "wall";
   aabb: AABB;
 };
+
+function createLevelState(): LevelState {
+  return {
+    player: {
+      aabb: {
+        x: 200,
+        y: 550,
+        width: 24,
+        height: 24,
+      },
+      movement: {
+        x: 0,
+        y: 0,
+      },
+      movementFn: handlePlayerMovement,
+    },
+    mobs: [
+      {
+        aabb: {
+          x: 150,
+          y: 300,
+          width: 24,
+          height: 24,
+        },
+        movement: { x: 0, y: 0 },
+        state: MobState.moving,
+        stateTimer: 0,
+        weaponTimer: 0,
+        movementFn: handleMobMovementLogic,
+      },
+      {
+        aabb: {
+          x: 300,
+          y: 500,
+          width: 24,
+          height: 24,
+        },
+        movement: { x: 0, y: 0 },
+        state: MobState.moving,
+        stateTimer: 0,
+        weaponTimer: 0,
+        movementFn: handleMobMovementLogic,
+      },
+      {
+        aabb: {
+          x: 200,
+          y: 300,
+          width: 24,
+          height: 24,
+        },
+        movement: { x: 0, y: 0 },
+        state: MobState.moving,
+        stateTimer: 0,
+        weaponTimer: 0,
+        movementFn: handleMobMovementLogic,
+      },
+    ],
+    endPortal: {
+      x: 5 * 40,
+      y: 0,
+      width: 40,
+      height: 40,
+    },
+    playerBullets: [],
+    mobBullets: [],
+    level: generateLevel(),
+  };
+}
 
 function generateLevel(): Level {
   const widthInTiles = 11;
@@ -404,47 +414,49 @@ function handleMobShootingLogic(mob: Mob, stepDuration: number) {
   }
 }
 
-function logicStep(logicFrameRateInMs: number, gameState: GameState) {
+function logicStep(logicFrameRateInMs: number, state: GameState) {
   weaponTimer += logicFrameRateInMs;
 
-  const player = gameState.player;
+  const levelState = state.levelState;
+
+  const player = levelState.player;
   // TODO: do the actual update of player's position
   // after hte collision detection has been done (for the future state)
   // handlePlayerMovement(player, logicFrameRateInMs, input.keyboardState);
   player.movementFn(player, logicFrameRateInMs, input.keyboardState);
 
-  for (const mob of [...gameState.mobs, player]) {
+  for (const mob of [...levelState.mobs, player]) {
     mob.movementFn(mob, logicFrameRateInMs, undefined);
   }
 
   isMobCollidingWithBoundaries(
     player,
-    [...gameState.boundaries, ...gameState.level.blocks.map((b) => b.aabb)],
+    [...state.boundaries, ...levelState.level.blocks.map((b) => b.aabb)],
     () => {}
   );
 
-  for (const mob of gameState.mobs) {
+  for (const mob of levelState.mobs) {
     isMobCollidingWithBoundaries(
       mob,
-      [...gameState.boundaries, ...gameState.level.blocks.map((b) => b.aabb)],
+      [...state.boundaries, ...levelState.level.blocks.map((b) => b.aabb)],
       () => {}
     );
   }
 
   if (
-    detectCollisionBetween(player.aabb, gameState.endPortal) &&
-    gameState.mobs.length === 0
+    detectCollisionBetween(player.aabb, levelState.endPortal) &&
+    levelState.mobs.length === 0
   ) {
-    // TODO Generate another level!
+    state.levelState = createLevelState();
   }
 
-  for (const mob of gameState.mobs) {
+  for (const mob of levelState.mobs) {
     handleMobShootingLogic(mob, logicFrameRateInMs);
   }
 
   if (playerIsStill(player) && weaponTimer >= weaponSpeedInMs) {
     weaponTimer = 0;
-    const closestMob = closestMobToPlayer(player, gameState.mobs);
+    const closestMob = closestMobToPlayer(player, levelState.mobs);
     if (closestMob) {
       const directionX = closestMob.aabb.x - player.aabb.x;
       const directionY = closestMob.aabb.y - player.aabb.y;
@@ -452,7 +464,7 @@ function logicStep(logicFrameRateInMs: number, gameState: GameState) {
       const normDirX = directionX / lenght;
       const normDirY = directionY / lenght;
 
-      gameState.playerBullets.push(
+      levelState.playerBullets.push(
         createPlayerBullet(
           {
             x: player.aabb.x + player.aabb.width / 2,
@@ -467,7 +479,7 @@ function logicStep(logicFrameRateInMs: number, gameState: GameState) {
     }
   }
 
-  for (const mob of gameState.mobs) {
+  for (const mob of levelState.mobs) {
     mob.weaponTimer! += logicFrameRateInMs;
 
     if (mob.state === MobState.shooting && mob.weaponTimer! > weaponSpeedInMs) {
@@ -478,7 +490,7 @@ function logicStep(logicFrameRateInMs: number, gameState: GameState) {
       const normDirX = directionX / lenght;
       const normDirY = directionY / lenght;
 
-      gameState.mobBullets.push(
+      levelState.mobBullets.push(
         createPlayerBullet(
           {
             x: mob.aabb.x + mob.aabb.width / 2,
@@ -492,24 +504,30 @@ function logicStep(logicFrameRateInMs: number, gameState: GameState) {
       );
     }
   }
-  for (const bullet of [...gameState.playerBullets, ...gameState.mobBullets]) {
+  for (const bullet of [
+    ...levelState.playerBullets,
+    ...levelState.mobBullets,
+  ]) {
     bullet.movementFn(bullet, logicFrameRateInMs);
   }
 
-  for (const bullet of [...gameState.playerBullets, ...gameState.mobBullets]) {
+  for (const bullet of [
+    ...levelState.playerBullets,
+    ...levelState.mobBullets,
+  ]) {
     bullet.ttl -= 1;
   }
 
-  for (const bullet of gameState.mobBullets) {
+  for (const bullet of levelState.mobBullets) {
     if (detectCollisionBetween(player.aabb, bullet.aabb)) {
-      console.log("player got hit!");
+      state.levelState = createLevelState();
     }
   }
 
-  for (const playerBullet of gameState.playerBullets) {
+  for (const playerBullet of levelState.playerBullets) {
     isMobCollidingWithBoundaries(
       playerBullet,
-      [...gameState.boundaries, ...gameState.level.blocks.map((b) => b.aabb)],
+      [...state.boundaries, ...levelState.level.blocks.map((b) => b.aabb)],
       (bullet, _target, delta) => {
         if (delta.x > delta.y) {
           bullet.movement.x = -bullet.movement.x;
@@ -520,10 +538,10 @@ function logicStep(logicFrameRateInMs: number, gameState: GameState) {
     );
   }
 
-  for (const mobBullet of gameState.mobBullets) {
+  for (const mobBullet of levelState.mobBullets) {
     isMobCollidingWithBoundaries(
       mobBullet,
-      [...gameState.boundaries, ...gameState.level.blocks.map((b) => b.aabb)],
+      [...state.boundaries, ...levelState.level.blocks.map((b) => b.aabb)],
       (bullet, _target, delta) => {
         if (delta.x > delta.y) {
           bullet.movement.x = -bullet.movement.x;
@@ -535,38 +553,38 @@ function logicStep(logicFrameRateInMs: number, gameState: GameState) {
   }
 
   let destroyedMobIndexes: number[] = [];
-  for (const mobIndex in gameState.mobs) {
-    const mob = gameState.mobs[mobIndex];
-    for (const bullet of gameState.playerBullets) {
+  for (const mobIndex in levelState.mobs) {
+    const mob = levelState.mobs[mobIndex];
+    for (const bullet of levelState.playerBullets) {
       if (detectCollisionBetween(mob.aabb, bullet.aabb)) {
         destroyedMobIndexes.push(mobIndex as any);
       }
     }
   }
   for (const index of destroyedMobIndexes.reverse()) {
-    gameState.mobs.splice(index, 1);
+    levelState.mobs.splice(index, 1);
   }
 
   // player bullets
   let deleteIndexes: number[] = [];
-  for (const bulletIndex in gameState.playerBullets) {
-    if (gameState.playerBullets[bulletIndex].ttl <= 0) {
+  for (const bulletIndex in levelState.playerBullets) {
+    if (levelState.playerBullets[bulletIndex].ttl <= 0) {
       deleteIndexes.push(bulletIndex as any);
     }
   }
   for (const index of deleteIndexes.reverse()) {
-    gameState.playerBullets.splice(index, 1);
+    levelState.playerBullets.splice(index, 1);
   }
 
   // mob bullets
   deleteIndexes = [];
-  for (const bulletIndex in gameState.mobBullets) {
-    if (gameState.mobBullets[bulletIndex].ttl <= 0) {
+  for (const bulletIndex in levelState.mobBullets) {
+    if (levelState.mobBullets[bulletIndex].ttl <= 0) {
       deleteIndexes.push(bulletIndex as any);
     }
   }
   for (const index of deleteIndexes.reverse()) {
-    gameState.mobBullets.splice(index, 1);
+    levelState.mobBullets.splice(index, 1);
   }
 }
 
@@ -603,11 +621,7 @@ function detectCollisionBetween(lhs: AABB, rhs: AABB) {
   );
 }
 
-function render(
-  canvas: HTMLCanvasElement,
-  alpha: number,
-  gameState: GameState
-) {
+function render(canvas: HTMLCanvasElement, alpha: number, state: GameState) {
   const ctx = canvas.getContext("2d");
   if (!ctx) {
     console.error("canvas context is null");
@@ -616,8 +630,10 @@ function render(
 
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+  const levelState = state.levelState;
+
   // render level
-  const level = gameState.level;
+  const level = levelState.level;
   // render the base map
   let switcher = false;
   for (let y = 0; y < level.heightInTiles; ++y) {
@@ -645,27 +661,27 @@ function render(
 
   ctx.fillStyle = "rgb(119, 67, 67)";
   ctx.fillRect(
-    gameState.endPortal.x,
-    gameState.endPortal.y,
-    gameState.endPortal.width,
-    gameState.endPortal.height
+    levelState.endPortal.x,
+    levelState.endPortal.y,
+    levelState.endPortal.width,
+    levelState.endPortal.height
   );
 
   ctx.fillStyle = "#FF0000";
   ctx.fillRect(
-    gameState.player.aabb.x + alpha * gameState.player.movement.x,
-    gameState.player.aabb.y + alpha * gameState.player.movement.y,
-    gameState.player.aabb.width,
-    gameState.player.aabb.height
+    levelState.player.aabb.x + alpha * levelState.player.movement.x,
+    levelState.player.aabb.y + alpha * levelState.player.movement.y,
+    levelState.player.aabb.width,
+    levelState.player.aabb.height
   );
 
   ctx.fillStyle = "#00a000";
-  for (const mob of gameState.mobs) {
+  for (const mob of levelState.mobs) {
     ctx.fillRect(mob.aabb.x, mob.aabb.y, mob.aabb.width, mob.aabb.height);
   }
 
   ctx.fillStyle = "#090909";
-  for (const bullet of gameState.playerBullets) {
+  for (const bullet of levelState.playerBullets) {
     ctx.fillRect(
       bullet.aabb.x,
       bullet.aabb.y,
@@ -675,7 +691,7 @@ function render(
   }
 
   ctx.fillStyle = "#090909";
-  for (const bullet of gameState.mobBullets) {
+  for (const bullet of levelState.mobBullets) {
     ctx.fillRect(
       bullet.aabb.x,
       bullet.aabb.y,
