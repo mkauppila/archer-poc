@@ -518,6 +518,12 @@ function logicStep(logicFrameRateInMs: number, gameState: GameState) {
     );
   }
 
+  for (const bullet of gameState.mobBullets) {
+    if (detectCollisionBetween(player.aabb, bullet.aabb)) {
+      console.log("player got hit!");
+    }
+  }
+
   let destroyedMobIndexes: number[] = [];
   for (const mobIndex in gameState.mobs) {
     const mob = gameState.mobs[mobIndex];
