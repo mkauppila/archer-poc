@@ -552,8 +552,6 @@ function detectCollisionBetween(lhs: AABB, rhs: AABB) {
   );
 }
 
-// main();
-
 function render(
   canvas: HTMLCanvasElement,
   alpha: number,
@@ -601,16 +599,6 @@ function render(
     gameState.endPortal.width,
     gameState.endPortal.height
   );
-  /*
-  for (const boundary of gameState.boundaries) {
-    ctx.fillRect(
-      boundary.position.x,
-      boundary.position.y,
-      boundary.width,
-      boundary.height
-    );
-  }
-  */
 
   ctx.fillStyle = "#FF0000";
   ctx.fillRect(
