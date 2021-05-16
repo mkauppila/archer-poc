@@ -45,7 +45,8 @@ type Bullet = {
 } & Mob;
 
 type AABB = {
-  position: Vector;
+  x: number;
+  y: number;
   width: number;
   height: number;
 };
@@ -63,10 +64,8 @@ type GameState = {
 const gameState: GameState = {
   player: {
     aabb: {
-      position: {
-        x: 200,
-        y: 550,
-      },
+      x: 200,
+      y: 550,
       width: 24,
       height: 24,
     },
@@ -78,10 +77,8 @@ const gameState: GameState = {
   mobs: [
     {
       aabb: {
-        position: {
-          x: 150,
-          y: 300,
-        },
+        x: 150,
+        y: 300,
         width: 24,
         height: 24,
       },
@@ -92,10 +89,8 @@ const gameState: GameState = {
     },
     {
       aabb: {
-        position: {
-          x: 300,
-          y: 500,
-        },
+        x: 300,
+        y: 500,
         width: 24,
         height: 24,
       },
@@ -106,10 +101,8 @@ const gameState: GameState = {
     },
     {
       aabb: {
-        position: {
-          x: 200,
-          y: 300,
-        },
+        x: 200,
+        y: 300,
         width: 24,
         height: 24,
       },
@@ -120,10 +113,8 @@ const gameState: GameState = {
     },
   ],
   endPortal: {
-    position: {
-      x: 5 * 40,
-      y: 0,
-    },
+    x: 5 * 40,
+    y: 0,
     width: 40,
     height: 40,
   },
@@ -136,37 +127,29 @@ const gameState: GameState = {
     {
       height: 880,
       width: 10,
-      position: {
-        x: -10,
-        y: 0,
-      },
+      x: -10,
+      y: 0,
     },
     // right
     {
       height: 8800,
       width: 10,
-      position: {
-        x: 440,
-        y: 0,
-      },
+      x: 440,
+      y: 0,
     },
     // top
     {
       height: 10,
       width: 440,
-      position: {
-        x: 0,
-        y: -10,
-      },
+      x: 0,
+      y: -10,
     },
     // bottom
     {
       height: 16,
       width: 440,
-      position: {
-        x: 0,
-        y: 880,
-      },
+      x: 0,
+      y: 880,
     },
   ],
 };
@@ -198,10 +181,8 @@ function generateLevel(): Level {
       blocks.push({
         type: "wall",
         aabb: {
-          position: {
-            x: x * tileWidth,
-            y: y * tileHeight,
-          },
+          x: x * tileWidth,
+          y: y * tileHeight,
           width: tileWidth,
           height: tileHeight,
         },
@@ -213,10 +194,8 @@ function generateLevel(): Level {
       blocks.push({
         type: "wall",
         aabb: {
-          position: {
-            x: x * tileWidth,
-            y: y * tileHeight,
-          },
+          x: x * tileWidth,
+          y: y * tileHeight,
           width: tileWidth,
           height: tileHeight,
         },
@@ -226,10 +205,8 @@ function generateLevel(): Level {
       blocks.push({
         type: "wall",
         aabb: {
-          position: {
-            x: x * tileWidth,
-            y: y * tileHeight,
-          },
+          x: x * tileWidth,
+          y: y * tileHeight,
           width: tileWidth,
           height: tileHeight,
         },
@@ -271,8 +248,8 @@ function handlePlayerMovement(player: Mob, keyboardState: input.KeyboardState) {
     player.movement.x = 0;
   }
 
-  player.aabb.position.x += player.movement.x;
-  player.aabb.position.y += player.movement.y;
+  player.aabb.x += player.movement.x;
+  player.aabb.y += player.movement.y;
 }
 
 function playerIsStill(player: Mob) {
@@ -282,10 +259,8 @@ function playerIsStill(player: Mob) {
 function createPlayerBullet(startingPoint: Vector, direction: Vector) {
   return {
     aabb: {
-      position: {
-        x: startingPoint.x,
-        y: startingPoint.y,
-      },
+      x: startingPoint.x,
+      y: startingPoint.y,
       width: 2,
       height: 2,
     },
@@ -299,22 +274,20 @@ function createPlayerBullet(startingPoint: Vector, direction: Vector) {
 
 function updateBullets(bullets: Bullet[]) {
   for (const bullet of bullets) {
-    bullet.aabb.position.x += bullet.movement.x;
-    bullet.aabb.position.y += bullet.movement.y;
+    bullet.aabb.x += bullet.movement.x;
+    bullet.aabb.y += bullet.movement.y;
 
     bullet.ttl = bullet.ttl - 1;
   }
 }
 
 function closestMobToPlayer(player: Mob, mobs: Mob[]) {
-  const ppos = player.aabb.position;
-
   let closestMob = null;
   let smallestDistance = 10_000;
   for (const mob of mobs) {
-    const mpos = mob.aabb.position;
-
-    const distance = Math.sqrt((ppos.x - mpos.x) ** 2 + (ppos.y - mpos.y) ** 2);
+    const distance = Math.sqrt(
+      (player.aabb.x - mob.aabb.x) ** 2 + (player.aabb.y - mob.aabb.y) ** 2
+    );
     if (distance < smallestDistance) {
       smallestDistance = distance;
       closestMob = mob;
@@ -332,10 +305,8 @@ function isMobCollidingWithBoundaries(
   handler: (mob: Mob, target: AABB, delta: Vector) => void
 ) {
   const updated: AABB = {
-    position: {
-      x: player.aabb.position.x, // + player.movement.x,
-      y: player.aabb.position.y, // + player.movement.y,
-    },
+    x: player.aabb.x, // + player.movement.x,
+    y: player.aabb.y, // + player.movement.y,
     height: player.aabb.height,
     width: player.aabb.width,
   };
@@ -344,30 +315,30 @@ function isMobCollidingWithBoundaries(
       let dx = 0;
       let dy = 0;
 
-      if (updated.position.x < boundary.position.x) {
-        dx = boundary.position.x - (updated.position.x + updated.width);
+      if (updated.x < boundary.x) {
+        dx = boundary.x - (updated.x + updated.width);
       } else {
-        dx = updated.position.x - (boundary.position.x + boundary.width);
+        dx = updated.x - (boundary.x + boundary.width);
       }
 
-      if (updated.position.y < boundary.position.y) {
-        dy = boundary.position.y - (updated.position.y + updated.height);
+      if (updated.y < boundary.y) {
+        dy = boundary.y - (updated.y + updated.height);
       } else {
-        dy = updated.position.y - (boundary.position.y + boundary.height);
+        dy = updated.y - (boundary.y + boundary.height);
       }
 
       // collision on x-axis
       if (Math.abs(dx) < Math.abs(dy)) {
         if (player.movement.x > 0) {
-          player.aabb.position.x += dx;
+          player.aabb.x += dx;
         } else {
-          player.aabb.position.x -= dx;
+          player.aabb.x -= dx;
         }
       } else {
         if (player.movement.y > 0) {
-          player.aabb.position.y += dy;
+          player.aabb.y += dy;
         } else {
-          player.aabb.position.y -= dy;
+          player.aabb.y -= dy;
         }
       }
 
@@ -397,8 +368,8 @@ function handleMobMovementLogic(mob: Mob, stepDuration: number) {
         mob.movement.y = Math.random() * 2 - 1;
       }
 
-      mob.aabb.position.x += mob.movement.x;
-      mob.aabb.position.y += mob.movement.y;
+      mob.aabb.x += mob.movement.x;
+      mob.aabb.y += mob.movement.y;
     }
     // move to direction until timer is up
     // then movement = 0
@@ -453,8 +424,8 @@ function logicStep(logicFrameRateInMs: number, gameState: GameState) {
     weaponTimer = 0;
     const closestMob = closestMobToPlayer(player, gameState.mobs);
     if (closestMob) {
-      const directionX = closestMob.aabb.position.x - player.aabb.position.x;
-      const directionY = closestMob.aabb.position.y - player.aabb.position.y;
+      const directionX = closestMob.aabb.x - player.aabb.x;
+      const directionY = closestMob.aabb.y - player.aabb.y;
       const lenght = Math.sqrt(directionX ** 2 + directionY ** 2);
       const normDirX = directionX / lenght;
       const normDirY = directionY / lenght;
@@ -462,8 +433,8 @@ function logicStep(logicFrameRateInMs: number, gameState: GameState) {
       gameState.playerBullets.push(
         createPlayerBullet(
           {
-            x: player.aabb.position.x + player.aabb.width / 2,
-            y: player.aabb.position.y + player.aabb.height / 2,
+            x: player.aabb.x + player.aabb.width / 2,
+            y: player.aabb.y + player.aabb.height / 2,
           },
           {
             x: normDirX,
@@ -480,8 +451,8 @@ function logicStep(logicFrameRateInMs: number, gameState: GameState) {
 
     if (mob.state === MobState.shooting && mob.weaponTimer! > weaponSpeedInMs) {
       mob.weaponTimer = 0;
-      const directionX = player.aabb.position.x - mob.aabb.position.x;
-      const directionY = player.aabb.position.y - mob.aabb.position.y;
+      const directionX = player.aabb.x - mob.aabb.x;
+      const directionY = player.aabb.y - mob.aabb.y;
       const lenght = Math.sqrt(directionX ** 2 + directionY ** 2);
       const normDirX = directionX / lenght;
       const normDirY = directionY / lenght;
@@ -489,8 +460,8 @@ function logicStep(logicFrameRateInMs: number, gameState: GameState) {
       gameState.mobBullets.push(
         createPlayerBullet(
           {
-            x: mob.aabb.position.x + mob.aabb.width / 2,
-            y: mob.aabb.position.y + mob.aabb.height / 2,
+            x: mob.aabb.x + mob.aabb.width / 2,
+            y: mob.aabb.y + mob.aabb.height / 2,
           },
           {
             x: normDirX,
@@ -574,10 +545,10 @@ function main() {
 
 function detectCollisionBetween(lhs: AABB, rhs: AABB) {
   return (
-    lhs.position.x < rhs.position.x + rhs.width &&
-    lhs.position.x + lhs.width > rhs.position.x &&
-    lhs.position.y < rhs.position.y + rhs.height &&
-    lhs.position.y + lhs.height > rhs.position.y
+    lhs.x < rhs.x + rhs.width &&
+    lhs.x + lhs.width > rhs.x &&
+    lhs.y < rhs.y + rhs.height &&
+    lhs.y + lhs.height > rhs.y
   );
 }
 
@@ -616,8 +587,8 @@ function render(
   ctx.fillStyle = "rgb(184, 222, 250)";
   for (const block of level.blocks) {
     ctx.fillRect(
-      block.aabb.position.x,
-      block.aabb.position.y,
+      block.aabb.x,
+      block.aabb.y,
       block.aabb.width,
       block.aabb.height
     );
@@ -625,8 +596,8 @@ function render(
 
   ctx.fillStyle = "rgb(119, 67, 67)";
   ctx.fillRect(
-    gameState.endPortal.position.x,
-    gameState.endPortal.position.y,
+    gameState.endPortal.x,
+    gameState.endPortal.y,
     gameState.endPortal.width,
     gameState.endPortal.height
   );
@@ -643,27 +614,22 @@ function render(
 
   ctx.fillStyle = "#FF0000";
   ctx.fillRect(
-    gameState.player.aabb.position.x + alpha * gameState.player.movement.x,
-    gameState.player.aabb.position.y + alpha * gameState.player.movement.y,
+    gameState.player.aabb.x + alpha * gameState.player.movement.x,
+    gameState.player.aabb.y + alpha * gameState.player.movement.y,
     gameState.player.aabb.width,
     gameState.player.aabb.height
   );
 
   ctx.fillStyle = "#00a000";
   for (const mob of gameState.mobs) {
-    ctx.fillRect(
-      mob.aabb.position.x,
-      mob.aabb.position.y,
-      mob.aabb.width,
-      mob.aabb.height
-    );
+    ctx.fillRect(mob.aabb.x, mob.aabb.y, mob.aabb.width, mob.aabb.height);
   }
 
   ctx.fillStyle = "#090909";
   for (const bullet of gameState.playerBullets) {
     ctx.fillRect(
-      bullet.aabb.position.x,
-      bullet.aabb.position.y,
+      bullet.aabb.x,
+      bullet.aabb.y,
       bullet.aabb.width,
       bullet.aabb.height
     );
@@ -672,8 +638,8 @@ function render(
   ctx.fillStyle = "#090909";
   for (const bullet of gameState.mobBullets) {
     ctx.fillRect(
-      bullet.aabb.position.x,
-      bullet.aabb.position.y,
+      bullet.aabb.x,
+      bullet.aabb.y,
       bullet.aabb.width,
       bullet.aabb.height
     );
