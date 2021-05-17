@@ -11,7 +11,7 @@ enum MobState {
   shooting,
 }
 
-type Mob = {
+export type Mob = {
   aabb: AABB;
   movement: Vector;
   movementFn: (
@@ -20,6 +20,7 @@ type Mob = {
     input?: input.KeyboardState
   ) => void;
   health: number;
+  maxHealth: number;
   state?: MobState;
   stateTimer?: number;
   weaponTimer?: number;
@@ -79,6 +80,7 @@ export function createLevelState(): LevelState {
         y: 0,
       },
       health: 100,
+      maxHealth: 100,
       movementFn: handlePlayerMovement,
     },
     mobs: [
@@ -94,6 +96,7 @@ export function createLevelState(): LevelState {
         stateTimer: 0,
         weaponTimer: 0,
         health: 40,
+        maxHealth: 40,
         movementFn: handleMobMovementLogic,
       },
       {
@@ -108,6 +111,7 @@ export function createLevelState(): LevelState {
         stateTimer: 0,
         weaponTimer: 0,
         health: 40,
+        maxHealth: 40,
         movementFn: handleMobMovementLogic,
       },
       {
@@ -122,6 +126,7 @@ export function createLevelState(): LevelState {
         stateTimer: 0,
         weaponTimer: 0,
         health: 40,
+        maxHealth: 40,
         movementFn: handleMobMovementLogic,
       },
     ],
@@ -249,6 +254,7 @@ function createPlayerBullet(startingPoint: Vector, direction: Vector) {
     },
     ttl: 192,
     health: 40,
+    maxHealth: 40,
     movementFn: updateBulletMovement,
   };
 }
@@ -260,8 +266,6 @@ function updateBulletMovement(
 ) {
   bullet.aabb.x += bullet.movement.x;
   bullet.aabb.y += bullet.movement.y;
-
-  // bullet.ttl = bullet.ttl - 1;
 }
 
 function closestMobToPlayer(player: Mob, mobs: Mob[]) {
@@ -489,7 +493,7 @@ export function logicStep(logicFrameRateInMs: number, state: GameState) {
         timer: 0,
       });
       player.health -= 10;
-      if (player.health < 0) {
+      if (player.health <= 0) {
         state.levelState = createLevelState();
       }
     }
@@ -537,7 +541,7 @@ export function logicStep(logicFrameRateInMs: number, state: GameState) {
 
         mob.health -= 10;
         console.log("mob health ", mob.health);
-        if (mob.health < 0) {
+        if (mob.health <= 0) {
           destroyedMobIndexes.push(mobIndex as any);
         }
       }

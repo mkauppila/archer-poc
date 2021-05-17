@@ -1,4 +1,5 @@
 import { GameState } from "./gameLoop";
+import { Mob } from "./gameplay";
 
 let ctx: CanvasRenderingContext2D | null = null;
 let width = 0;
@@ -67,7 +68,7 @@ export function render(alpha: number, state: GameState) {
     levelState.player.aabb.height
   );
 
-  ctx.fillStyle = "#00a000";
+  ctx.fillStyle = "purple";
   for (const mob of levelState.mobs) {
     ctx.fillRect(mob.aabb.x, mob.aabb.y, mob.aabb.width, mob.aabb.height);
   }
@@ -92,7 +93,39 @@ export function render(alpha: number, state: GameState) {
     );
   }
 
+  for (const mob of [...levelState.mobs, levelState.player]) {
+    renderHealthBar(ctx, mob);
+  }
+
+  ctx.fillStyle = "#090909";
   for (const message of levelState.messages) {
     ctx.fillText(message.message, message.position.x, message.position.y);
   }
+}
+
+function renderHealthBar(ctx: CanvasRenderingContext2D, mob: Mob) {
+  const position = {
+    x: mob.aabb.x,
+    y: mob.aabb.y - 8,
+    width: mob.aabb.width,
+    height: 6,
+  };
+  const healthColor = "#00a000";
+  const barBackgroundColor = "black";
+
+  const healthPercentage = mob.health / mob.maxHealth;
+
+  ctx.fillStyle = barBackgroundColor;
+  ctx.fillRect(position.x, position.y, position.width, position.height);
+
+  ctx.fillStyle = healthColor;
+  ctx.fillRect(
+    position.x,
+    position.y,
+    position.width * healthPercentage,
+    position.height
+  );
+
+  ctx.fillStyle = "white";
+  ctx.fillText(`${mob.health}`, position.x, position.y - 2);
 }
