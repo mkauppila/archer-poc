@@ -234,10 +234,12 @@ function handlePlayerMovement(
 
   player.aabb.x += player.movement.x;
   player.aabb.y += player.movement.y;
-}
 
-function playerIsStill(player: Mob) {
-  return player.movement.x === 0 && player.movement.y == 0;
+  if (player.movement.x === 0 && player.movement.y === 0) {
+    player.state = MobState.shooting;
+  } else {
+    player.state = MobState.moving;
+  }
 }
 
 function createPlayerBullet(startingPoint: Vector, direction: Vector) {
@@ -420,7 +422,7 @@ export function logicStep(logicFrameRateInMs: number, state: GameState) {
     handleMobShootingLogic(mob, logicFrameRateInMs);
   }
 
-  if (playerIsStill(player) && weaponTimer >= weaponSpeedInMs) {
+  if (player.state === MobState.shooting && weaponTimer >= weaponSpeedInMs) {
     weaponTimer = 0;
     const closestMob = closestMobToPlayer(player, levelState.mobs);
     if (closestMob) {
