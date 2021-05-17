@@ -30,7 +30,7 @@ const gameState: GameState = {
     },
     // right
     {
-      height: 8800,
+      height: 880,
       width: 10,
       x: 440,
       y: 0,

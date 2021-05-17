@@ -5,7 +5,6 @@ let width = 0;
 let height = 0;
 
 export function init(canvas: HTMLCanvasElement) {
-  console.log("canvas: ", canvas);
   ctx = canvas.getContext("2d");
   if (!ctx) {
     console.error("canvas context is null");
