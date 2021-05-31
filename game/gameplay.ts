@@ -27,8 +27,10 @@ export type Mob = {
 };
 
 type Bullet = {
+  movement: Vector;
+  aabb: AABB;
   ttl: number;
-} & Mob;
+};
 
 export type AABB = {
   x: number;
@@ -242,7 +244,7 @@ function handlePlayerMovement(
   }
 }
 
-function createPlayerBullet(startingPoint: Vector, direction: Vector) {
+function createBullet(startingPoint: Vector, direction: Vector): Bullet {
   return {
     aabb: {
       x: startingPoint.x,
@@ -255,17 +257,10 @@ function createPlayerBullet(startingPoint: Vector, direction: Vector) {
       y: direction.y,
     },
     ttl: 192,
-    health: 40,
-    maxHealth: 40,
-    movementFn: updateBulletMovement,
   };
 }
 
-function updateBulletMovement(
-  bullet: Mob,
-  _stepDuration: number,
-  _keyboardState?: input.KeyboardState
-) {
+function updateBulletMovement(bullet: Bullet, logicFrameRateInMs: number) {
   bullet.aabb.x += bullet.movement.x;
   bullet.aabb.y += bullet.movement.y;
 }
@@ -289,13 +284,13 @@ const weaponSpeedInMs = 200;
 let weaponTimer = 0;
 
 function isMobCollidingWithBoundaries(
-  player: Mob,
+  player: Mob | Bullet,
   boundaries: AABB[],
-  handler: (mob: Mob, target: AABB, delta: Vector) => void
+  handler: (mob: Mob | Bullet, target: AABB, delta: Vector) => void
 ) {
   const updated: AABB = {
-    x: player.aabb.x, // + player.movement.x,
-    y: player.aabb.y, // + player.movement.y,
+    x: player.aabb.x,
+    y: player.aabb.y,
     height: player.aabb.height,
     width: player.aabb.width,
   };
@@ -433,7 +428,7 @@ export function logicStep(logicFrameRateInMs: number, state: GameState) {
       const normDirY = directionY / lenght;
 
       levelState.playerBullets.push(
-        createPlayerBullet(
+        createBullet(
           {
             x: player.aabb.x + player.aabb.width / 2,
             y: player.aabb.y + player.aabb.height / 2,
@@ -459,7 +454,7 @@ export function logicStep(logicFrameRateInMs: number, state: GameState) {
       const normDirY = directionY / lenght;
 
       levelState.mobBullets.push(
-        createPlayerBullet(
+        createBullet(
           {
             x: mob.aabb.x + mob.aabb.width / 2,
             y: mob.aabb.y + mob.aabb.height / 2,
@@ -476,7 +471,7 @@ export function logicStep(logicFrameRateInMs: number, state: GameState) {
     ...levelState.playerBullets,
     ...levelState.mobBullets,
   ]) {
-    bullet.movementFn(bullet, logicFrameRateInMs);
+    updateBulletMovement(bullet, logicFrameRateInMs);
   }
 
   for (const bullet of [
