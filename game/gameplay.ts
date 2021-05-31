@@ -1,5 +1,6 @@
 import { GameState } from "./gameLoop";
 import * as input from "./input";
+import { generateLevel, Level } from "./generateLevel";
 
 type Vector = {
   x: number;
@@ -48,19 +49,6 @@ export type LevelState = {
   level: Level;
   endPortal: AABB;
   messages: Message[];
-};
-
-type Level = {
-  blocks: Block[];
-  tileWidthInPx: number;
-  tileHeightInPx: number;
-  widthInTiles: number;
-  heightInTiles: number;
-};
-
-type Block = {
-  type: "wall";
-  aabb: AABB;
 };
 
 export function createLevelState(): LevelState {
@@ -133,64 +121,6 @@ export function createLevelState(): LevelState {
     mobBullets: [],
     level: generateLevel(),
     messages: [],
-  };
-}
-
-function generateLevel(): Level {
-  const widthInTiles = 11;
-  const heightInTiles = 22;
-  const tileHeight = Math.floor(880 / heightInTiles);
-  const tileWidth = Math.floor(440 / widthInTiles);
-
-  const generateBlocks = (width: number, height: number): Block[] => {
-    const blocks: Block[] = [];
-
-    let y = 4;
-    for (let x = 2; x < 9; ++x) {
-      blocks.push({
-        type: "wall",
-        aabb: {
-          x: x * tileWidth,
-          y: y * tileHeight,
-          width: tileWidth,
-          height: tileHeight,
-        },
-      });
-    }
-
-    for (let y = 12; y < 18; ++y) {
-      let x = 2;
-      blocks.push({
-        type: "wall",
-        aabb: {
-          x: x * tileWidth,
-          y: y * tileHeight,
-          width: tileWidth,
-          height: tileHeight,
-        },
-      });
-
-      x = 8;
-      blocks.push({
-        type: "wall",
-        aabb: {
-          x: x * tileWidth,
-          y: y * tileHeight,
-          width: tileWidth,
-          height: tileHeight,
-        },
-      });
-    }
-
-    return blocks;
-  };
-
-  return {
-    blocks: generateBlocks(widthInTiles, heightInTiles),
-    tileWidthInPx: tileWidth,
-    tileHeightInPx: tileHeight,
-    widthInTiles,
-    heightInTiles,
   };
 }
 
