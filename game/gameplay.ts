@@ -14,11 +14,6 @@ enum MobState {
 export type Mob = {
   aabb: AABB;
   movement: Vector;
-  movementFn: (
-    mob: Mob,
-    stepDuration: number,
-    input?: input.KeyboardState
-  ) => void;
   health: number;
   maxHealth: number;
   state?: MobState;
@@ -83,7 +78,6 @@ export function createLevelState(): LevelState {
       },
       health: 100,
       maxHealth: 100,
-      movementFn: handlePlayerMovement,
     },
     mobs: [
       {
@@ -99,7 +93,6 @@ export function createLevelState(): LevelState {
         weaponTimer: 0,
         health: 40,
         maxHealth: 40,
-        movementFn: handleMobMovementLogic,
       },
       {
         aabb: {
@@ -114,7 +107,6 @@ export function createLevelState(): LevelState {
         weaponTimer: 0,
         health: 40,
         maxHealth: 40,
-        movementFn: handleMobMovementLogic,
       },
       {
         aabb: {
@@ -129,7 +121,6 @@ export function createLevelState(): LevelState {
         weaponTimer: 0,
         health: 40,
         maxHealth: 40,
-        movementFn: handleMobMovementLogic,
       },
     ],
     endPortal: {
@@ -386,10 +377,10 @@ export function logicStep(logicFrameRateInMs: number, state: GameState) {
   // TODO: do the actual update of player's position
   // after hte collision detection has been done (for the future state)
   // handlePlayerMovement(player, logicFrameRateInMs, input.keyboardState);
-  player.movementFn(player, logicFrameRateInMs, input.keyboardState);
+  handlePlayerMovement(player, logicFrameRateInMs, input.keyboardState);
 
   for (const mob of [...levelState.mobs, player]) {
-    mob.movementFn(mob, logicFrameRateInMs, undefined);
+    handleMobMovementLogic(mob, logicFrameRateInMs);
   }
 
   isMobCollidingWithBoundaries(
